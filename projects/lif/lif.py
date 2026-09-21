@@ -1,61 +1,112 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-#parameters
-t_max=150e-3
-dt=1e-3
-tau=20e-3
-el=-60e-3
-vr=-70e-3
-vth=-50e-3
-r=100e6
-i_mean=25e-11
+#LIF(leaky integrate-and-fire) Model
+#tau*du/dt=I(t)R-u+u_rest
+#tau---time constant,dt---a small period of time,u---the voltage of membrane,I--the current past through the mambrane,u_rest--resting potential
 
-#################################################
-## TODO for students: fill out code to store v in list ##
-# Fill out code and comment or remove the next line
-#raise NotImplementedError("Student exercise: You need to store v in list")
-#################################################
+class LIF:
+  def __init__(self, n=1, t_max=150e-3, #
+    dt=1e-3,
+    tau=20e-3,
+    u_rest=-70e-3,
+    u_th=-50e-3,
+    R=100e6,
+    u_start=-70e-3,
+    u_reset=-70e-3
+    ):
+    #number of neuron(s)
+    self.n=n
+    #property parameters
+    self.t_max=t_max#
+    self.dt=dt
+    self.tau=tau
+    self.u_rest=u_rest
+    self.u_th=u_th #threshold for firing
+    self.R=R #resistor
+    self.u_reset=u_reset
+    
 
-# Set random number generator
-np.random.seed(2020)
+    #state parameters
+    self.steps=int(self.t_max/self.dt)
+    self.u_start=u_start
+    self.I=np.zeros((n,self.steps))
+    self.u=np.zeros((n,self.steps))
+    self.fire=np.zeros((n,self.steps))
 
-# Initialize step_end and n
-step_end = int(t_max / dt)
-n = 50
+  def integrate_fire_process(self):
+    for i in range (self.n):
+      self.u[i,0]=self.u_start
+    for i in range(1,self.steps):
+      for j in range(self.n):
+        self.u[j,i]=self.u[j,i-1]+self.dt*(self.I[j,i-1]*self.R-self.u[j,i-1]+self.u_rest)/self.tau
+        if self.u[j,i]>=self.u_th:
+          self.u[j,i]=self.u_reset
+          self.fire[j,i]=1
 
-# Intiatialize the list v_n with 50 values of membrane leak potential el
-v_n = n*[el]
+  def plot_process(self):
+    time = np.arange(self.steps) * self.dt
 
-# Initialize the figure
-plt.figure()
-plt.title('Multiple realizations of $V_m$')
-plt.xlabel('time (s)')
-plt.ylabel('$V_m$ (V)')
+    fig, axes = plt.subplots(
+        2,
+        1,
+        figsize=(10, 6),
+        sharex=True,
+        gridspec_kw={"height_ratios": [3, 1]}
+    )
 
-# Loop for step_end steps
-for step in range(step_end):
+    # Convert SI units to readable units.
+    time_ms = time * 1e3
+    voltage_mV = self.u * 1e3
 
-  # Compute value of t
-  t = step * dt
+    # Membrane potential.
+    for neuron_index in range(self.n):
+        axes[0].plot(
+            time_ms,
+            voltage_mV[neuron_index],
+            label=f"neuron {neuron_index}"
+        )
 
-  # Loop for n simulations
-  for j in range(0, n):
+    axes[0].axhline(
+        self.u_th * 1e3,
+        color="red",
+        linestyle="--",
+        label="threshold"
+    )
+    axes[0].set_ylabel("Membrane potential (mV)")
+    axes[0].set_title("LIF membrane potential")
+    axes[0].legend()
+    axes[0].grid(True, alpha=0.3)
 
-    # Compute value of i at this time step
-    i = i_mean * (1 + 0.1 * (t_max/dt)**(0.5) * (2* np.random.random() - 1))
+    # Spike raster.
+    for neuron_index in range(self.n):
+        spike_times = time_ms[self.fire[neuron_index] == 1]
+        axes[1].scatter(
+            spike_times,
+            np.full_like(spike_times, neuron_index),
+            marker="|",
+            s=100
+        )
 
-    # Compute value of v for this simulation
-    v_n[j] = v_n[j] + (dt / tau) * (el - v_n[j] + r*i)
+    axes[1].set_xlabel("Time (ms)")
+    axes[1].set_ylabel("Neuron")
+    axes[1].set_yticks(range(self.n))
+    axes[1].set_title("Spike times")
+    axes[1].grid(True, alpha=0.3)
 
-  # Compute sample mean by summing list of v_n using sum, and dividing by n
-  v_mean = sum(v_n)/n
+    plt.tight_layout()
+    plt.show()
 
-  # Plot simulations
-  plt.plot(n*[t], v_n, 'k.', alpha=0.1)
+def main():
+    lif = LIF()
 
-  # Plot sample mean using alpha=0.8 and'C0.' for blue
-  plt.plot(t,v_mean,'C0',alpha=0.8)
+    #constant input
+    lif.I[:, :] = 0.25e-9
 
-# Display plot
-plt.show()
+
+    lif.integrate_fire_process()
+    lif.plot_process()
+
+
+if __name__ == "__main__":
+    main()
