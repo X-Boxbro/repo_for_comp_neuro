@@ -2,6 +2,8 @@
 
 This repository records a gradual entry into computational neuroscience through mathematical notes and small simulations.
 
+> **Learning and implementation disclosure:** This repository is for learning purposes. The code used to verify theoretical ideas was implemented with the assistance of large language models (LLMs), and should be treated as learning-oriented exploratory code.
+
 ## Repository map
 
 - [Learning overview](./计算神经学.md) - Current bilingual-free learning notes and conceptual map.
